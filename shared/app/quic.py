@@ -1,15 +1,14 @@
-from mininet.net import Mininet
-from mininet.node import Controller, Host, Node, OVSKernelSwitch
 from mininet.link import TCLink
 from mininet.log import setLogLevel, info
-from mininet.cli import CLI
+from mininet.net import Mininet
+from mininet.node import Controller, OVSKernelSwitch
 
 
 def build():
     net = Mininet()
 
     info("*** Adding controller ***\n")
-    c0 = net.addController(name="c0", controller=Controller, protocol="tcp", port=6633)
+    c0 = net.addController(name="c0", protocol="tcp", ip="192.168.56.1", port=6633)
     info("done\n")
 
     info("*** Adding switch ***\n")

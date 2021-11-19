@@ -1,3 +1,5 @@
 mininet==2.3.0.dev6
 pexpect==4.6.0
 pyflakes==2.1.1
+ryu==4.34
+eventlet==0.30.2
