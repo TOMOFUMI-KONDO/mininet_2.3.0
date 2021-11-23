@@ -30,7 +30,7 @@ class LearningL2Switch(app_manager.RyuApp):
         mac_src = eth.src
         mac_dst = eth.dst
 
-        print('PACKET_IN')
+        print(f"PACKET_IN mac_src:{mac_src} mac_dst:{mac_dst} in_port:{in_port}")
 
         if mac_src not in self.mac_to_port:
             self.mac_to_port[mac_src] = msg.in_port
@@ -44,22 +44,7 @@ class LearningL2Switch(app_manager.RyuApp):
         actions = [ofp_parser.OFPActionOutput(out_port)]
 
         if out_port != ofp.OFPP_FLOOD:
-            match = ofp_parser.OFPMatch(
-                in_port=in_port,
-                dl_src=haddr_to_bin(mac_src),
-                dl_dst=haddr_to_bin(mac_dst),
-            )
-            mod = ofp_parser.OFPFlowMod(
-                datapath=dp,
-                match=match,
-                cookie=0,
-                command=ofp.OFPFC_ADD,
-                idle_timeout=0,
-                hard_timeout=0,
-                flags=ofp.OFPFF_SEND_FLOW_REM,
-                actions=actions
-            )
-            dp.send_msg(mod)
+            self.__add_flow(dp, in_port, mac_src, mac_dst, actions)
 
         data = None
         if msg.buffer_id == ofp.OFP_NO_BUFFER:
@@ -74,3 +59,23 @@ class LearningL2Switch(app_manager.RyuApp):
         )
 
         dp.send_msg(out)
+
+    def __add_flow(self, datapath, in_port, mac_src, mac_dst, actions):
+        ofp_parser = datapath.ofproto_parser
+        ofproto = datapath.ofproto
+        match = ofp_parser.OFPMatch(
+            in_port=in_port,
+            dl_src=haddr_to_bin(mac_src),
+            dl_dst=haddr_to_bin(mac_dst),
+        )
+        mod = ofp_parser.OFPFlowMod(
+            datapath=datapath,
+            match=match,
+            cookie=0,
+            command=ofproto.OFPFC_ADD,
+            idle_timeout=0,
+            hard_timeout=0,
+            flags=ofproto.OFPFF_SEND_FLOW_REM,
+            actions=actions
+        )
+        datapath.send_msg(mod)
