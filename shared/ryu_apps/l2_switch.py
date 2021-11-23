@@ -14,6 +14,12 @@ class L2Switch(app_manager.RyuApp):
 
     def __init__(self, *args, **kwargs):
         super(L2Switch, self).__init__(*args, **kwargs)
+
+        if os.environ.get('DEBUG') == '1':
+            self.debug = True
+        else:
+            self.debug = False
+
         self.datetime = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         self.key = 0
 
@@ -44,7 +50,8 @@ class L2Switch(app_manager.RyuApp):
         packet = Packet(data)
         pretty_json = json.dumps(packet.to_jsondict(), indent=4, sort_keys=True)
 
-        print(pretty_json)
+        if self.debug:
+            print(pretty_json)
 
         dump_dir = f"dump/{self.datetime}"
         os.makedirs(dump_dir, exist_ok=True)
