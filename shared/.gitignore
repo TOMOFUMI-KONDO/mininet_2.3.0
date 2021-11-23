@@ -1,5 +1,10 @@
+# virtualenv
 bin/
 include/
 lib/
+__pycache__/
 pyvenv.cfg
 .Python
+
+# dump
+dump/
