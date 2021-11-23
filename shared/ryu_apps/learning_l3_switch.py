@@ -74,7 +74,7 @@ class LearningL3Switch(app_manager.RyuApp):
         if ethertype == ether_types.ETH_TYPE_IP:
             actions = self.__handle_ip(pkt=pkt, datapath=datapath, in_port=in_port, buffer_id=msg.buffer_id)
         else:
-            actions = self.__handle_eth(eth=eth, datapath=datapath, in_port=in_port, buffer_id=buffer_id)
+            actions = self.__handle_eth(eth=eth, datapath=datapath, in_port=in_port)
 
         # don't send PACKET_OUT message when buffered
         if not actions:
@@ -86,7 +86,7 @@ class LearningL3Switch(app_manager.RyuApp):
 
         out = parser.OFPPacketOut(
             datapath=datapath,
-            buffer_id=msg.buffer_id,
+            buffer_id=buffer_id,
             in_port=in_port,
             actions=actions,
             data=data,
@@ -133,6 +133,8 @@ class LearningL3Switch(app_manager.RyuApp):
         # learn a ipv4 address to avoid FLOOD next time.
         self.ip_to_port[dpid][ip_src] = in_port
 
+        print(ip_dst)
+        print(self.ip_to_port)
         if ip_dst in self.ip_to_port[dpid]:
             out_port = self.ip_to_port[dpid][ip_dst]
         else:
@@ -153,7 +155,7 @@ class LearningL3Switch(app_manager.RyuApp):
 
         return actions
 
-    def __handle_eth(self, eth, datapath, in_port, buffer_id):
+    def __handle_eth(self, eth, datapath, in_port):
         dpid = datapath.id
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
@@ -174,16 +176,5 @@ class LearningL3Switch(app_manager.RyuApp):
             out_port = ofproto.OFPP_FLOOD
 
         actions = [parser.OFPActionOutput(out_port)]
-
-        # install a flow to avoid packet_in next time
-        if out_port != ofproto.OFPP_FLOOD:
-            match = parser.OFPMatch(in_port=in_port, eth_dst=mac_dst, eth_src=mac_src)
-            # verify if we have a valid buffer_id, if yes avoid to send both
-            # flow_mod & packet_out
-            if buffer_id != ofproto.OFP_NO_BUFFER:
-                self.__add_flow(datapath, 1, match, actions, buffer_id)
-                return None
-            else:
-                self.__add_flow(datapath, 1, match, actions)
 
         return actions
