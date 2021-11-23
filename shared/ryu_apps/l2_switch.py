@@ -25,6 +25,8 @@ class L2Switch(app_manager.RyuApp):
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def packet_in_handler(self, ev):
+        print('PACKET_IN')
+
         msg = ev.msg
         dp = msg.datapath
         ofp = dp.ofproto
