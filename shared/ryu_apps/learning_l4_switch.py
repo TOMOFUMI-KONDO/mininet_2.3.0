@@ -17,7 +17,7 @@ from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER
 from ryu.controller.handler import set_ev_cls
-from ryu.lib.packet import ether_types
+from ryu.lib.packet import ether_types, in_proto, tcp, udp
 from ryu.lib.packet import ethernet
 from ryu.lib.packet import ipv4
 from ryu.lib.packet import packet
@@ -72,7 +72,7 @@ class LearningL4Switch(app_manager.RyuApp):
             return
 
         if ethertype == ether_types.ETH_TYPE_IP:
-            actions = self.__handle_ip(pkt=pkt, datapath=datapath, in_port=in_port, buffer_id=msg.buffer_id)
+            actions = self.__handle_ip_or_higher(pkt=pkt, datapath=datapath, in_port=in_port, buffer_id=msg.buffer_id)
         else:
             actions = self.__handle_eth(eth=eth, datapath=datapath, in_port=in_port)
 
@@ -92,6 +92,108 @@ class LearningL4Switch(app_manager.RyuApp):
             data=data,
         )
         datapath.send_msg(out)
+
+    def __handle_ip_or_higher(self, pkt, datapath, in_port, buffer_id):
+        dpid = datapath.id
+        ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser
+
+        self.ip_to_port.setdefault(dpid, {})
+
+        ip = pkt.get_protocol(ipv4.ipv4)
+        ip_src = ip.src
+        ip_dst = ip.dst
+        protocol = ip.proto
+
+        self.logger.info(
+            "ip-packet in datapath:%s ip_src:%s ip_dst:%s in_port:%s protocol:%s",
+            dpid,
+            ip_src,
+            ip_dst,
+            in_port,
+            protocol,
+        )
+        print(protocol)
+
+        # learn a ipv4 address to avoid FLOOD next time.
+        self.ip_to_port[dpid][ip_src] = in_port
+
+        if ip_dst in self.ip_to_port[dpid]:
+            out_port = self.ip_to_port[dpid][ip_dst]
+        else:
+            out_port = ofproto.OFPP_FLOOD
+
+        actions = [parser.OFPActionOutput(out_port)]
+
+        # install a flow to avoid packet_in next time
+        if out_port != ofproto.OFPP_FLOOD:
+            if protocol == in_proto.IPPROTO_ICMP:
+                match = parser.OFPMatch(
+                    eth_type=ether_types.ETH_TYPE_IP,
+                    ipv4_src=ip_src,
+                    ipv4_dst=ip_dst,
+                    ip_proto=protocol,
+                )
+            elif protocol == in_proto.IPPROTO_TCP:
+                t = pkt.get_protocol(tcp.tcp)
+                match = parser.OFPMatch(
+                    eth_type=ether_types.ETH_TYPE_IP,
+                    ipv4_src=ip_src,
+                    ipv4_dst=ip_dst,
+                    ip_proto=protocol,
+                    tcp_src=t.src_port,
+                    tcp_dst=t.dst_port,
+                )
+            elif protocol == in_proto.IPPROTO_UDP:
+                u = pkt.get_protocol(udp.udp)
+                match = parser.OFPMatch(
+                    eth_type=ether_types.ETH_TYPE_IP,
+                    ipv4_src=ip_src,
+                    ipv4_dst=ip_dst,
+                    ip_proto=protocol,
+                    udp_src=u.src_port,
+                    tcp_dst=u.dst_port,
+                )
+            else:
+                match = parser.OFPMatch(
+                    eth_type=ether_types.ETH_TYPE_IP,
+                    ipv4_src=ip_src,
+                    ipv4_dst=ip_dst,
+                )
+
+            # verify if we have a valid buffer_id, if yes avoid to send both
+            # flow_mod & packet_out
+            if buffer_id != ofproto.OFP_NO_BUFFER:
+                self.__add_flow(datapath, 1, match, actions, buffer_id)
+                return None
+            else:
+                self.__add_flow(datapath, 1, match, actions)
+
+        return actions
+
+    def __handle_eth(self, eth, datapath, in_port):
+        dpid = datapath.id
+        ofproto = datapath.ofproto
+        parser = datapath.ofproto_parser
+
+        self.mac_to_port.setdefault(datapath.id, {})
+
+        mac_dst = eth.dst
+        mac_src = eth.src
+
+        self.logger.info("eth-packet in datapath:%s mac_src:%s mac_dst:%s in_port:%s", dpid, mac_src, mac_dst, in_port)
+
+        # learn a mac address to avoid FLOOD next time.
+        self.mac_to_port[dpid][mac_src] = in_port
+
+        if mac_dst in self.mac_to_port[dpid]:
+            out_port = self.mac_to_port[dpid][mac_dst]
+        else:
+            out_port = ofproto.OFPP_FLOOD
+
+        actions = [parser.OFPActionOutput(out_port)]
+
+        return actions
 
     def __add_flow(self, datapath, priority, match, actions, buffer_id=None):
         ofproto = datapath.ofproto
@@ -116,63 +218,3 @@ class LearningL4Switch(app_manager.RyuApp):
             )
 
         datapath.send_msg(mod)
-
-    def __handle_ip(self, pkt, datapath, in_port, buffer_id):
-        dpid = datapath.id
-        ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser
-
-        self.ip_to_port.setdefault(dpid, {})
-
-        ip = pkt.get_protocol(ipv4.ipv4)
-        ip_src = ip.src
-        ip_dst = ip.dst
-
-        self.logger.info("packet in datapath:%s ip_src:%s ip_dst:%s in_port:%s", dpid, ip_src, ip_dst, in_port)
-
-        # learn a ipv4 address to avoid FLOOD next time.
-        self.ip_to_port[dpid][ip_src] = in_port
-
-        if ip_dst in self.ip_to_port[dpid]:
-            out_port = self.ip_to_port[dpid][ip_dst]
-        else:
-            out_port = ofproto.OFPP_FLOOD
-
-        actions = [parser.OFPActionOutput(out_port)]
-
-        # install a flow to avoid packet_in next time
-        if out_port != ofproto.OFPP_FLOOD:
-            match = parser.OFPMatch(eth_type=ether_types.ETH_TYPE_IP, ipv4_src=ip_src, ipv4_dst=ip_dst)
-            # verify if we have a valid buffer_id, if yes avoid to send both
-            # flow_mod & packet_out
-            if buffer_id != ofproto.OFP_NO_BUFFER:
-                self.__add_flow(datapath, 1, match, actions, buffer_id)
-                return None
-            else:
-                self.__add_flow(datapath, 1, match, actions)
-
-        return actions
-
-    def __handle_eth(self, eth, datapath, in_port):
-        dpid = datapath.id
-        ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser
-
-        self.mac_to_port.setdefault(datapath.id, {})
-
-        mac_dst = eth.dst
-        mac_src = eth.src
-
-        self.logger.info("packet in datapath:%s mac_src:%s mac_dst:%s in_port:%s", dpid, mac_src, mac_dst, in_port)
-
-        # learn a mac address to avoid FLOOD next time.
-        self.mac_to_port[dpid][mac_src] = in_port
-
-        if mac_dst in self.mac_to_port[dpid]:
-            out_port = self.mac_to_port[dpid][mac_dst]
-        else:
-            out_port = ofproto.OFPP_FLOOD
-
-        actions = [parser.OFPActionOutput(out_port)]
-
-        return actions
