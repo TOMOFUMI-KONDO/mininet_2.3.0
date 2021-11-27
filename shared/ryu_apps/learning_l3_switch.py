@@ -51,17 +51,17 @@ class LearningL3Switch(app_manager.RyuApp):
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
-        # If you hit this you might want to increase
-        # the "miss_send_length" of your switch
-        if ev.msg.msg_len < ev.msg.total_len:
-            self.logger.debug("packet truncated: only %s of %s bytes", ev.msg.msg_len, ev.msg.total_len)
-
         msg = ev.msg
         datapath = msg.datapath
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
         in_port = msg.match['in_port']
         buffer_id = msg.buffer_id
+
+        # If you hit this you might want to increase
+        # the "miss_send_length" of your switch
+        if msg.msg_len < msg.total_len:
+            self.logger.debug("packet truncated: only %s of %s bytes", ev.msg.msg_len, ev.msg.total_len)
 
         pkt = packet.Packet(msg.data)
         eth = pkt.get_protocol(ethernet.ethernet)
@@ -72,7 +72,7 @@ class LearningL3Switch(app_manager.RyuApp):
             return
 
         if ethertype == ether_types.ETH_TYPE_IP:
-            actions = self.__handle_ip(pkt=pkt, datapath=datapath, in_port=in_port, buffer_id=msg.buffer_id)
+            actions = self.__handle_ip(pkt=pkt, datapath=datapath, in_port=in_port, buffer_id=buffer_id)
         else:
             actions = self.__handle_eth(eth=eth, datapath=datapath, in_port=in_port)
 
@@ -81,7 +81,7 @@ class LearningL3Switch(app_manager.RyuApp):
             return
 
         data = None
-        if msg.buffer_id == ofproto.OFP_NO_BUFFER:
+        if buffer_id == ofproto.OFP_NO_BUFFER:
             data = msg.data
 
         out = parser.OFPPacketOut(
