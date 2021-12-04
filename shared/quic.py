@@ -1,8 +1,9 @@
+import time
+
 from mininet.link import TCLink
 from mininet.log import setLogLevel, info
 from mininet.net import Mininet
 from mininet.node import RemoteController, OVSKernelSwitch
-from mininet.cli import CLI
 
 
 def build():
@@ -26,9 +27,16 @@ def build():
 
     net.start()
 
-    info("send QUIC packet\n")
-    h1.cmd("./bin/echo_server/server &")
-    print(h2.cmd("./bin/echo_server/client -addr 10.0.0.1:4430"))
+    net.pingAll()
+
+    info("*** Starting QUIC server. Please wait... ***\n")
+    h1.cmd("./bin/server -addr 0.0.0.0:4430 &")
+    time.sleep(3)
+    info("*** Started! ***\n")
+
+    info("*** Send QUIC packet ***\n")
+    out = h2.cmd("./bin/client -addr 10.0.0.1:4430")
+    print(out)
 
     net.stop()
 
