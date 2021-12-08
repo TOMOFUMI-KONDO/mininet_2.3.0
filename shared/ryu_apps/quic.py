@@ -101,7 +101,6 @@ class LearningL4Switch(app_manager.RyuApp):
                 in_port,
                 ipproto,
             )
-            print(json.dumps(pkt.protocols, indent=4, sort_keys=True))
 
     def __add_flow(self, datapath, priority, match, actions, buffer_id=None):
         ofproto = datapath.ofproto
