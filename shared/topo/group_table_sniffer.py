@@ -1,7 +1,7 @@
 from mininet.topo import Topo
 
 
-class GroupTableTopo(Topo):
+class GroupTableSnifferTopo(Topo):
     def build(self):
         h1 = self.addHost('h1')
         h2 = self.addHost('h2')
@@ -18,4 +18,4 @@ class GroupTableTopo(Topo):
         self.addLink(s1, sniffer)
 
 
-topos = {'group_table_topo': (lambda: GroupTableTopo())}
+topos = {'group_table_sniffer_topo': (lambda: GroupTableSnifferTopo())}
