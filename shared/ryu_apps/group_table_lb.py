@@ -1,6 +1,7 @@
 from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller.handler import set_ev_cls, CONFIG_DISPATCHER, MAIN_DISPATCHER
+from ryu.lib.packet import ether_types, ethernet, packet
 from ryu.ofproto import ofproto_v1_3
 
 
@@ -52,17 +53,26 @@ class GroupTableSwitch(app_manager.RyuApp):
         in_port = msg.match['in_port']
         buffer_id = msg.buffer_id
 
-        actions = [parser.OFPActionOutput(ofproto.OFPP_FLOOD)]
-
         data = None
         if buffer_id == ofproto.OFP_NO_BUFFER:
             data = msg.data
+
+        pkt = packet.Packet(data)
+        eth = pkt.get_protocol(ethernet.ethernet)
+
+        # ignore LLDP packet
+        if eth.ethertype == ether_types.ETH_TYPE_LLDP:
+            return
+
+        if eth.dst[:5] == "33:33":
+            self.logger.info("drop ipv6 multicast packet %s", eth.dst)
+            return
 
         out = parser.OFPPacketOut(
             datapath=datapath,
             buffer_id=buffer_id,
             in_port=in_port,
-            actions=actions,
+            actions=[parser.OFPActionOutput(ofproto.OFPP_FLOOD)],
             data=data
         )
         datapath.send_msg(out)
