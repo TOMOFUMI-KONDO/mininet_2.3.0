@@ -6,6 +6,9 @@ from ryu.ofproto import ofproto_v1_3
 
 
 class GroupTableSwitch(app_manager.RyuApp):
+    LB_WEIGHT_1 = 100
+    LB_WEIGHT_2 = 100 - LB_WEIGHT_1
+
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
 
     def __init__(self, *args, **kwargs):
@@ -81,18 +84,15 @@ class GroupTableSwitch(app_manager.RyuApp):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
 
-        LB_WEIGHT_1 = 50
-        LB_WEIGHT_2 = 100 - LB_WEIGHT_1
-
         watch_port = ofproto.OFPP_ANY
         watch_group = ofproto.OFPQ_ALL
 
-        actionOutputPort1 = [parser.OFPActionOutput(1)]
-        actionOutputPort2 = [parser.OFPActionOutput(2)]
+        action_output_port1 = [parser.OFPActionOutput(1)]
+        action_output_port2 = [parser.OFPActionOutput(2)]
 
         buckets = [
-            parser.OFPBucket(LB_WEIGHT_1, watch_port, watch_group, actions=actionOutputPort1),
-            parser.OFPBucket(LB_WEIGHT_2, watch_port, watch_group, actions=actionOutputPort2)
+            parser.OFPBucket(self.LB_WEIGHT_1, watch_port, watch_group, actions=action_output_port1),
+            parser.OFPBucket(self.LB_WEIGHT_2, watch_port, watch_group, actions=action_output_port2)
         ]
         req = parser.OFPGroupMod(datapath, ofproto.OFPGC_ADD, ofproto.OFPGT_SELECT, 50, buckets)
         datapath.send_msg(req)
