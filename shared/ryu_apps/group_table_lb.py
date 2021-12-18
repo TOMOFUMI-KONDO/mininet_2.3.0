@@ -32,8 +32,8 @@ class GroupTableSwitch(app_manager.RyuApp):
             self.__add_flow(datapath, 10, match, actions)
 
             actions = [parser.OFPActionOutput(3)]
-            self.__add_flow(datapath, 10, parser.OFPmatch(in_port=1), actions)
-            self.__add_flow(datapath, 10, parser.OFPmatch(in_port=2), actions)
+            self.__add_flow(datapath, 10, parser.OFPMatch(in_port=1), actions)
+            self.__add_flow(datapath, 10, parser.OFPMatch(in_port=2), actions)
         else:
             actions = [parser.OFPActionOutput(2)]
             match = parser.OFPMatch(in_port=1)

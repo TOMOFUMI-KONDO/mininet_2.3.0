@@ -30,7 +30,7 @@ if __name__ == "__main__":
         topo=GroupTableLbTopo(),
         controller=RemoteController("c1", ip="127.0.0.1")
     )
-   
+
     net.start()
     CLI(net)
     net.stop()
