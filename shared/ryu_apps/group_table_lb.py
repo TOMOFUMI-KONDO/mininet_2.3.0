@@ -6,7 +6,7 @@ from ryu.ofproto import ofproto_v1_3
 
 
 class GroupTableSwitch(app_manager.RyuApp):
-    LB_WEIGHT_1 = 100
+    LB_WEIGHT_1 = 90
     LB_WEIGHT_2 = 100 - LB_WEIGHT_1
 
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
@@ -17,12 +17,7 @@ class GroupTableSwitch(app_manager.RyuApp):
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
         datapath = ev.msg.datapath
-        ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
-
-        match = parser.OFPMatch()
-        actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER)]
-        self.__add_flow(datapath, 0, match, actions)
 
         if datapath.id in [1, 4]:
             self.__send_group_mod(datapath)
