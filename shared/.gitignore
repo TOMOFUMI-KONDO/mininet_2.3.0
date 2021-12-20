@@ -4,6 +4,7 @@ include/
 lib/
 __pycache__/
 pyvenv.cfg
+src/
 
 # dump
 dump/
