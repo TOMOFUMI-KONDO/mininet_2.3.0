@@ -1,2 +1,35 @@
+certifi==2021.10.8
+charset-normalizer==2.0.8
+debtcollector==2.3.0
+dnspython==1.16.0
+eventlet==0.31.1
+greenlet==1.1.2
+grpcio==1.43.0
+grpcio-tools==1.43.0
+idna==3.3
 mininet==2.3.0.dev6
-# ryu==4.34
+msgpack==1.0.3
+netaddr==0.8.0
+oslo.config==8.7.1
+oslo.i18n==5.1.0
+ovs==2.16.0
+packaging==20.9
+pbr==5.8.0
+pexpect==4.6.0
+protobuf==3.19.1
+ptyprocess==0.7.0
+pyflakes==2.1.1
+pyparsing==3.0.6
+PyYAML==6.0
+repoze.lru==0.7
+requests==2.26.0
+rfc3986==1.5.0
+Routes==2.5.1
+-e git+ssh://git@github.com/TOMOFUMI-KONDO/ryu.git@537f35f4b2bc634ef05e3f28373eb5e24609f989#egg=ryu
+six==1.16.0
+sortedcontainers==2.4.0
+stevedore==3.5.0
+tinyrpc==1.0.4
+urllib3==1.26.7
+WebOb==1.8.7
+wrapt==1.13.3
