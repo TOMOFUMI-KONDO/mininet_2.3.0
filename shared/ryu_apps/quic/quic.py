@@ -1,7 +1,7 @@
 from ryu.base import app_manager
-from ryu.controller import ofp_event
+from ryu.controller import ofp_event, controller
 from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER, set_ev_cls
-from ryu.lib.packet import ether_types, in_proto, ethernet, ipv4, packet
+from ryu.lib.packet import ether_types, in_proto, ethernet, ipv4, packet, udp
 from ryu.ofproto import ofproto_v1_3
 
 from parsequic import run
@@ -46,14 +46,13 @@ class Quic(app_manager.RyuApp):
         buffer_id = msg.buffer_id
 
         pkt = packet.Packet(msg.data)
-        run(pkt.rest_data, host="192.168.56.1")
         ethertype = pkt.get_protocol(ethernet.ethernet).ethertype
 
         if ethertype in self.IGNORED_ETHER_TYPES:
             return
 
-        # if ethertype == ether_types.ETH_TYPE_IP:
-        #     self.__handle_ip(pkt=pkt, datapath=dp, in_port=in_port)
+        if ethertype == ether_types.ETH_TYPE_IP:
+            self.__handle_ip(pkt=pkt, datapath=dp, in_port=in_port)
 
         data = None
         if buffer_id == ofproto.OFP_NO_BUFFER:
@@ -68,19 +67,21 @@ class Quic(app_manager.RyuApp):
         )
         dp.send_msg(out)
 
-    def __handle_ip(self, pkt: packet.Packet, datapath, in_port: int):
+    def __handle_ip(self, pkt: packet.Packet, datapath: controller.Datapath, in_port: int):
         ip = pkt.get_protocol(ipv4.ipv4)
 
-        # install a flow to avoid packet_in next time
         if ip.proto == in_proto.IPPROTO_UDP:
+            u = pkt.get_protocol(udp.udp)
             self.logger.info(
-                "ip-packet in datapath:%s ip_src:%s ip_dst:%s in_port:%s protocol:%s",
+                "udp-packet in datapath:%s %s:%s -> %s:%s in_port:%s",
                 datapath.id,
                 ip.src,
+                u.src_port,
                 ip.dst,
-                in_port,
-                ip.proto,
+                u.dst_port,
+                in_port
             )
+            run(pkt.rest_data, host="192.168.56.1")
 
     def __add_flow(self, datapath, priority, match, actions, buffer_id=None):
         ofproto = datapath.ofproto
