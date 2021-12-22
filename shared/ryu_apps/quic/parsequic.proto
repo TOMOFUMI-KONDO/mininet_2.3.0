@@ -12,16 +12,17 @@ message ParseQuicRequest{
   bytes data = 1;
 }
 
-enum LongHeaderPacketType {
-  INITIAL = 0;
-  ZERO_RTT = 1;
-  HANDSHAKE = 2;
-  RETRY = 3;
+enum PacketType {
+  SHORT_HEADER = 0;
+  INITIAL = 1;
+  ZERO_RTT = 2;
+  HANDSHAKE = 3;
+  RETRY = 4;
 }
 
 message ParseQuicReply{
   bool isLongHeader = 1;
-  LongHeaderPacketType type = 2;
+  PacketType type = 2;
   uint32 version = 3;
   bytes dstConnID = 4;
   bytes srcConnID = 5;

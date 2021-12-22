@@ -25,7 +25,7 @@ repoze.lru==0.7
 requests==2.26.0
 rfc3986==1.5.0
 Routes==2.5.1
--e git+ssh://git@github.com/TOMOFUMI-KONDO/ryu.git@af07ccc8a0de96590a11aad97f8eb81c4a021037#egg=ryu
+-e git+ssh://git@github.com/TOMOFUMI-KONDO/ryu.git@0a2e6c1d27eb51b0ecb454dd1e2250a97bf5925f#egg=ryu
 six==1.16.0
 sortedcontainers==2.4.0
 stevedore==3.5.0
