@@ -7,11 +7,13 @@ def run(data: bytes, host="localhost", port=8080):
     channel = grpc.insecure_channel(f"{host}:{port}")
     stub = pqgrpc.ParseQuicStub(channel)
     r = stub.Parse(pq.ParseQuicRequest(data=data))
+
     print(
         f"isLongHeader:{r.isLongHeader} "
-        f"type:{r.type} version:{pq.PacketType.Name(r.type)} "
-        f"dstConnID:{r.dstConnID} "
-        f"srcConnID:{r.srcConnID}\n"
+        f"type:{pq.PacketType.Name(r.type)} "
+        f"version:{r.version}"
+        f"dstConnID:{r.dstConnID.hex()} "
+        f"srcConnID:{r.srcConnID.hex()}\n"
     )
 
 

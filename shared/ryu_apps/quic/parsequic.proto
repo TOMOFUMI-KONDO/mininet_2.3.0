@@ -13,11 +13,12 @@ message ParseQuicRequest{
 }
 
 enum PacketType {
-  SHORT_HEADER = 0;
-  INITIAL = 1;
-  ZERO_RTT = 2;
-  HANDSHAKE = 3;
-  RETRY = 4;
+  ONE_RTT= 0; // short header
+  VERSION_NEGOTIATION = 1;
+  INITIAL = 2;
+  ZERO_RTT = 3;
+  HANDSHAKE = 4;
+  RETRY = 5;
 }
 
 message ParseQuicReply{

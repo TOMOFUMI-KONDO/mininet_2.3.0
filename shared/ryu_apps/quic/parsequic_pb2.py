@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=b'Z)github.com/TOMOFUMI-KONDO/parsequic/proto',
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\x0fparsequic.proto\x12\x05proto\" \n\x10ParseQuicRequest\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\"~\n\x0eParseQuicReply\x12\x14\n\x0cisLongHeader\x18\x01 \x01(\x08\x12\x1f\n\x04type\x18\x02 \x01(\x0e\x32\x11.proto.PacketType\x12\x0f\n\x07version\x18\x03 \x01(\r\x12\x11\n\tdstConnID\x18\x04 \x01(\x0c\x12\x11\n\tsrcConnID\x18\x05 \x01(\x0c*S\n\nPacketType\x12\x10\n\x0cSHORT_HEADER\x10\x00\x12\x0b\n\x07INITIAL\x10\x01\x12\x0c\n\x08ZERO_RTT\x10\x02\x12\r\n\tHANDSHAKE\x10\x03\x12\t\n\x05RETRY\x10\x04\x32\x46\n\tParseQuic\x12\x39\n\x05Parse\x12\x17.proto.ParseQuicRequest\x1a\x15.proto.ParseQuicReply\"\x00\x42+Z)github.com/TOMOFUMI-KONDO/parsequic/protob\x06proto3'
+  serialized_pb=b'\n\x0fparsequic.proto\x12\x05proto\" \n\x10ParseQuicRequest\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\"~\n\x0eParseQuicReply\x12\x14\n\x0cisLongHeader\x18\x01 \x01(\x08\x12\x1f\n\x04type\x18\x02 \x01(\x0e\x32\x11.proto.PacketType\x12\x0f\n\x07version\x18\x03 \x01(\r\x12\x11\n\tdstConnID\x18\x04 \x01(\x0c\x12\x11\n\tsrcConnID\x18\x05 \x01(\x0c*g\n\nPacketType\x12\x0b\n\x07ONE_RTT\x10\x00\x12\x17\n\x13VERSION_NEGOTIATION\x10\x01\x12\x0b\n\x07INITIAL\x10\x02\x12\x0c\n\x08ZERO_RTT\x10\x03\x12\r\n\tHANDSHAKE\x10\x04\x12\t\n\x05RETRY\x10\x05\x32\x46\n\tParseQuic\x12\x39\n\x05Parse\x12\x17.proto.ParseQuicRequest\x1a\x15.proto.ParseQuicReply\"\x00\x42+Z)github.com/TOMOFUMI-KONDO/parsequic/protob\x06proto3'
 )
 
 _PACKETTYPE = _descriptor.EnumDescriptor(
@@ -31,27 +31,32 @@ _PACKETTYPE = _descriptor.EnumDescriptor(
   create_key=_descriptor._internal_create_key,
   values=[
     _descriptor.EnumValueDescriptor(
-      name='SHORT_HEADER', index=0, number=0,
+      name='ONE_RTT', index=0, number=0,
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
     _descriptor.EnumValueDescriptor(
-      name='INITIAL', index=1, number=1,
+      name='VERSION_NEGOTIATION', index=1, number=1,
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
     _descriptor.EnumValueDescriptor(
-      name='ZERO_RTT', index=2, number=2,
+      name='INITIAL', index=2, number=2,
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
     _descriptor.EnumValueDescriptor(
-      name='HANDSHAKE', index=3, number=3,
+      name='ZERO_RTT', index=3, number=3,
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
     _descriptor.EnumValueDescriptor(
-      name='RETRY', index=4, number=4,
+      name='HANDSHAKE', index=4, number=4,
+      serialized_options=None,
+      type=None,
+      create_key=_descriptor._internal_create_key),
+    _descriptor.EnumValueDescriptor(
+      name='RETRY', index=5, number=5,
       serialized_options=None,
       type=None,
       create_key=_descriptor._internal_create_key),
@@ -59,16 +64,17 @@ _PACKETTYPE = _descriptor.EnumDescriptor(
   containing_type=None,
   serialized_options=None,
   serialized_start=188,
-  serialized_end=271,
+  serialized_end=291,
 )
 _sym_db.RegisterEnumDescriptor(_PACKETTYPE)
 
 PacketType = enum_type_wrapper.EnumTypeWrapper(_PACKETTYPE)
-SHORT_HEADER = 0
-INITIAL = 1
-ZERO_RTT = 2
-HANDSHAKE = 3
-RETRY = 4
+ONE_RTT = 0
+VERSION_NEGOTIATION = 1
+INITIAL = 2
+ZERO_RTT = 3
+HANDSHAKE = 4
+RETRY = 5
 
 
 
@@ -193,8 +199,8 @@ _PARSEQUIC = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=273,
-  serialized_end=343,
+  serialized_start=293,
+  serialized_end=363,
   methods=[
   _descriptor.MethodDescriptor(
     name='Parse',
