@@ -1,10 +1,2 @@
-# virtualenv
-bin/
-include/
-lib/
-__pycache__/
-pyvenv.cfg
-src/
-
-# dump
+venv/
 dump/
