@@ -4,10 +4,11 @@ from ryu.controller.handler import CONFIG_DISPATCHER, MAIN_DISPATCHER, set_ev_cl
 from ryu.lib.packet import ether_types, in_proto, ethernet, ipv4, packet, udp
 from ryu.ofproto import ofproto_v1_3
 
+from flow_addable import FlowAddable
 from parsequic import run
 
 
-class Quic(app_manager.RyuApp):
+class Quic(app_manager.RyuApp, FlowAddable):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
     IGNORED_ETHER_TYPES = [ether_types.ETH_TYPE_LLDP, ether_types.ETH_TYPE_IPV6]
 
@@ -16,20 +17,13 @@ class Quic(app_manager.RyuApp):
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
-        datapath = ev.msg.datapath
-        ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser
+        dp = ev.msg.datapath
+        proto = dp.ofproto
+        parser = dp.ofproto_parser
 
-        # install table-miss flow entry
-        #
-        # We specify NO BUFFER to max_len of the output action due to
-        # OVS bug. At this moment, if we specify a lesser number, e.g.,
-        # 128, OVS will send Packet-In with invalid buffer_id and
-        # truncated packet data. In that case, we cannot output packets
-        # correctly.  The bug has been fixed in OVS v2.1.0.
         match = parser.OFPMatch()
-        actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER, ofproto.OFPCML_NO_BUFFER)]
-        self.__add_flow(datapath, 0, match, actions)
+        actions = [parser.OFPActionOutput(proto.OFPP_CONTROLLER, proto.OFPCML_NO_BUFFER)]
+        self._add_flow(dp, 0, match, actions)
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
@@ -40,10 +34,10 @@ class Quic(app_manager.RyuApp):
 
         msg = ev.msg
         dp = msg.datapath
-        ofproto = dp.ofproto
+        proto = dp.ofproto
         parser = dp.ofproto_parser
         in_port = msg.match['in_port']
-        buffer_id = msg.buffer_id
+        buf_id = msg.buffer_id
 
         pkt = packet.Packet(msg.data)
         ethertype = pkt.get_protocol(ethernet.ethernet).ethertype
@@ -51,24 +45,26 @@ class Quic(app_manager.RyuApp):
         if ethertype in self.IGNORED_ETHER_TYPES:
             return
 
-        if ethertype == ether_types.ETH_TYPE_IP:
-            self.__handle_ip(pkt=pkt, datapath=dp, in_port=in_port)
-
         data = None
-        if buffer_id == ofproto.OFP_NO_BUFFER:
+        if buf_id == proto.OFP_NO_BUFFER:
             data = msg.data
 
+        if ethertype == ether_types.ETH_TYPE_IP:
+            self.__handle_ip(data=data, pkt=pkt, datapath=dp, in_port=in_port, buffer_id=buf_id)
+
+        # flood packet
         out = parser.OFPPacketOut(
             datapath=dp,
-            buffer_id=buffer_id,
+            buffer_id=buf_id,
             in_port=in_port,
-            actions=[parser.OFPActionOutput(ofproto.OFPP_FLOOD)],
+            actions=[parser.OFPActionOutput(proto.OFPP_FLOOD)],
             data=data,
         )
         dp.send_msg(out)
 
-    def __handle_ip(self, pkt: packet.Packet, datapath: controller.Datapath, in_port: int):
+    def __handle_ip(self, data, pkt: packet.Packet, datapath: controller.Datapath, in_port: int, buffer_id: int):
         ip = pkt.get_protocol(ipv4.ipv4)
+        parser = datapath.ofproto_parser
 
         if ip.proto == in_proto.IPPROTO_UDP:
             u = pkt.get_protocol(udp.udp)
@@ -82,27 +78,3 @@ class Quic(app_manager.RyuApp):
                 in_port
             )
             run(pkt.rest_data, host="192.168.56.1")
-
-    def __add_flow(self, datapath, priority, match, actions, buffer_id=None):
-        ofproto = datapath.ofproto
-        parser = datapath.ofproto_parser
-
-        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)]
-
-        if buffer_id:
-            mod = parser.OFPFlowMod(
-                datapath=datapath,
-                buffer_id=buffer_id,
-                priority=priority,
-                match=match,
-                instructions=inst,
-            )
-        else:
-            mod = parser.OFPFlowMod(
-                datapath=datapath,
-                priority=priority,
-                match=match,
-                instructions=inst,
-            )
-
-        datapath.send_msg(mod)

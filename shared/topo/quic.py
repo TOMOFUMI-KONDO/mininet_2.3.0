@@ -1,9 +1,8 @@
 import time
 
-from mininet.link import TCLink
-from mininet.log import setLogLevel, info
+from mininet.log import setLogLevel
 from mininet.net import Mininet
-from mininet.node import RemoteController, OVSKernelSwitch
+from mininet.node import RemoteController
 from mininet.topo import Topo
 
 
@@ -32,9 +31,6 @@ if __name__ == "__main__":
     h1 = hosts[1]
 
     h0.cmd("./bin/server &")
-    time.sleep(3)  # wait to start server
-
-    out = h1.cmd(f"./bin/client -addr {h0.IP()}:4430")
-    print(out)
+    print(h1.cmd(f"./bin/client -addr {h0.IP()}:44300"))
 
     net.stop()
