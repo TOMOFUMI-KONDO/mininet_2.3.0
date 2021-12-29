@@ -25,6 +25,7 @@ if __name__ == "__main__":
     )
 
     net.start()
+    net.pingAll()
 
     hosts = net.hosts
     h0 = hosts[0]
