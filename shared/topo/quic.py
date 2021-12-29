@@ -32,6 +32,8 @@ if __name__ == "__main__":
     h1 = hosts[1]
 
     h0.cmd("./bin/server &")
+    time.sleep(5)  # wait until server starts
     print(h1.cmd(f"./bin/client -addr {h0.IP()}:44300"))
+    print(h1.cmd("cat keylog.txt"))
 
     net.stop()
