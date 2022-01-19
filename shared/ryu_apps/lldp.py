@@ -37,4 +37,3 @@ class LLDP(app_manager.RyuApp, FlowAddable):
 
         l = pkt.get_protocol(lldp.lldp)
         print(l.tlvs)
-
