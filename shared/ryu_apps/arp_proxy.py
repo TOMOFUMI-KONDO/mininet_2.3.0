@@ -6,7 +6,7 @@ from ryu.lib.packet import ether_types, ethernet, packet, arp
 from ryu.ofproto import ofproto_v1_0
 
 
-class LearningL2Switch(app_manager.RyuApp):
+class ArpProxy(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_0.OFP_VERSION]
 
     ARP_TABLE = {
@@ -17,7 +17,7 @@ class LearningL2Switch(app_manager.RyuApp):
     }
 
     def __init__(self, *args, **kwargs):
-        super(LearningL2Switch, self).__init__(*args, **kwargs)
+        super(ArpProxy, self).__init__(*args, **kwargs)
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def packet_in_handler(self, ev):
