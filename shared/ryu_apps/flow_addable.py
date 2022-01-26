@@ -1,5 +1,20 @@
+from __future__ import annotations
+
+from typing import Optional
+
+from ryu.controller.controller import Datapath
+from ryu.ofproto.ofproto_v1_3_parser import OFPMatch, OFPAction
+
+
 class FlowAddable:
-    def _add_flow(self, datapath, priority, match, actions, buffer_id=None):
+    def _add_flow(
+            self,
+            datapath: Datapath,
+            priority: int,
+            match: OFPMatch,
+            actions: list[OFPAction],
+            buffer_id: Optional[int] = None
+    ):
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
 
