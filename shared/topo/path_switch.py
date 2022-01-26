@@ -17,13 +17,13 @@ h1 --- s1          s4 --- h2
 
 class PathSwitchTopo(Topo):
     def build(self):
-        s1 = self.addSwitch("s1")
-        s2 = self.addSwitch("s2")
-        s3 = self.addSwitch("s3")
-        s4 = self.addSwitch("s4")
+        s1 = self.addSwitch("s1", dpid="1")
+        s2 = self.addSwitch("s2", dpid="2")
+        s3 = self.addSwitch("s3", dpid="3")
+        s4 = self.addSwitch("s4", dpid="4")
 
-        h1 = self.addHost("h1", ip="10.0.0.1/24")
-        h2 = self.addHost("h2", ip="10.0.0.2/24")
+        h1 = self.addHost("h1", ip="10.0.0.1/24", mac="00:00:00:00:00:01")
+        h2 = self.addHost("h2", ip="10.0.0.2/24", mac="00:00:00:00:00:02")
 
         self.addLink(s1, h1)
         self.addLink(s1, s2)
@@ -32,6 +32,8 @@ class PathSwitchTopo(Topo):
         self.addLink(s4, s2)
         self.addLink(s4, s3)
 
+
+topos = {"path_switch_topo": lambda: PathSwitchTopo()}
 
 if __name__ == "__main__":
     setLogLevel("info")

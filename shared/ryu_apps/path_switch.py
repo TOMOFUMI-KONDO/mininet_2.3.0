@@ -1,14 +1,17 @@
+from __future__ import annotations
+from typing import Optional
+
 from ryu.base import app_manager
 from ryu.controller import ofp_event
 from ryu.controller.controller import Datapath
 from ryu.controller.handler import set_ev_cls, MAIN_DISPATCHER, CONFIG_DISPATCHER
-from ryu.lib.packet import ether_types
-from ryu.lib.packet.ether_types import ETH_TYPE_IP
+from ryu.lib.packet.ether_types import ETH_TYPE_IPV6, ETH_TYPE_IP
 from ryu.lib.packet.ethernet import ethernet
 from ryu.lib.packet.packet import Packet
 from ryu.ofproto.ofproto_v1_3 import OFPPR_DELETE, OFPP_CONTROLLER, OFPCML_NO_BUFFER, OFP_VERSION, OFP_NO_BUFFER, \
     OFPP_FLOOD
-from ryu.ofproto.ofproto_v1_3_parser import OFPPort, OFPPortStatus, OFPMatch, OFPActionOutput, OFPPacketOut, OFPPacketIn
+from ryu.ofproto.ofproto_v1_3_parser import OFPPort, OFPPortStatus, OFPMatch, OFPActionOutput, OFPPacketOut, \
+    OFPPacketIn, OFPAction, OFPPortStatsReply
 
 from flow_addable import FlowAddable
 
@@ -18,40 +21,52 @@ class L2Switch(app_manager.RyuApp, FlowAddable):
 
     def __init__(self, *args, **kwargs):
         super(L2Switch, self).__init__(*args, **kwargs)
-        self.mac_to_port = {}
+        self.datapaths: dict[int, Datapath] = {}
+        self.mac_to_port: dict[int, dict[str, int]] = {}
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
         dp: Datapath = ev.msg.datapath
-        actions = [OFPActionOutput(OFPP_CONTROLLER, OFPCML_NO_BUFFER)]
-        self._add_flow(dp, 0, OFPMatch(), actions)
+        self.datapaths[dp.id] = dp
+
+        # send PacketIn when receive unknown packet
+        self._add_flow(dp, 0, OFPMatch(), [OFPActionOutput(OFPP_CONTROLLER, OFPCML_NO_BUFFER)])
+
+        # static route to avoid flood loop
+        if dp.id == 1:
+            self._add_flow(dp, 1, OFPMatch(in_port=2), [OFPActionOutput(1)])
+            self._add_flow(dp, 1, OFPMatch(in_port=1), [OFPActionOutput(2)])
+        if dp.id == 4:
+            self._add_flow(dp, 1, OFPMatch(in_port=2), [OFPActionOutput(1)])
+            self._add_flow(dp, 1, OFPMatch(in_port=1), [OFPActionOutput(2)])
 
     @set_ev_cls(ofp_event.EventOFPPortStatus, MAIN_DISPATCHER)
     def port_status_handler(self, ev):
         msg: OFPPortStatus = ev.msg
-        dp: Datapath = msg.datapath
-        desc: OFPPort = msg.desc
 
         if msg.reason == OFPPR_DELETE:
-            print(f"datapath:#{dp.id}")
-            print(desc.to_jsondict())
+            dp: Datapath = msg.datapath
+            desc: OFPPort = msg.desc
 
-            if dp.id == 4:
-                pass
+            print(f"datapath:{dp.id}")
+            if dp.id == 2:
+                print(f"port_no:{desc.port_no}")
+                self._add_flow(self.datapaths[1], 100, OFPMatch(in_port=1), [OFPActionOutput(3)])
+                self._add_flow(self.datapaths[1], 100, OFPMatch(in_port=3), [OFPActionOutput(1)])
+                self._add_flow(self.datapaths[4], 100, OFPMatch(in_port=1), [OFPActionOutput(3)])
+                self._add_flow(self.datapaths[4], 100, OFPMatch(in_port=3), [OFPActionOutput(1)])
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def packet_in_handler(self, ev):
         msg: OFPPacketIn = ev.msg
         buffer_id: int = msg.buffer_id
-        if msg.buffer_id != OFP_NO_BUFFER:
-            return
 
         data = msg.data
         pkt = Packet(data)
         eth: ethernet = pkt.get_protocol(ethernet)
 
         # ignore IPv6 ICMP
-        if eth.ethertype == ether_types.ETH_TYPE_IPV6:
+        if eth.ethertype == ETH_TYPE_IPV6:
             return
 
         dp: Datapath = msg.datapath
@@ -67,11 +82,11 @@ class L2Switch(app_manager.RyuApp, FlowAddable):
         )
         dp.send_msg(out)
 
-    def __switch_path(self, datapath: Datapath, out_port: int):
-        actions = [OFPActionOutput(out_port), OFPCML_NO_BUFFER]
-        self._add_flow(datapath, 1, OFPMatch, actions)
+    # def __switch_path(self, datapath: Datapath, out_port: int):
+    #     actions = [OFPActionOutput(out_port), OFPCML_NO_BUFFER]
+    #     self._add_flow(datapath, 1, OFPMatch, actions)
 
-    def __handle_eth(self, eth: ethernet, datapath: Datapath, in_port: int, buffer_id):
+    def __handle_eth(self, eth: ethernet, datapath: Datapath, in_port: int, buffer_id) -> Optional[list[OFPAction]]:
         self.mac_to_port.setdefault(datapath.id, {})
 
         self.logger.info(
@@ -84,6 +99,7 @@ class L2Switch(app_manager.RyuApp, FlowAddable):
 
         # learn a mac address to avoid FLOOD next time.
         self.mac_to_port[datapath.id][eth.src] = in_port
+        print(f"mac_to_port:{self.mac_to_port}")
 
         if eth.dst in self.mac_to_port[datapath.id]:
             out_port = self.mac_to_port[datapath.id][eth.dst]
@@ -92,8 +108,12 @@ class L2Switch(app_manager.RyuApp, FlowAddable):
 
         actions = [OFPActionOutput(out_port)]
 
-        # if out_port != OFPP_FLOOD:
-        #     match = OFPMatch(eth_dst=eth.dst)
-        #     self._add_flow(datapath, 100, match, actions, buffer_id)
+        if out_port != OFPP_FLOOD:
+            match = OFPMatch(eth_dst=eth.dst)
+            if buffer_id != OFP_NO_BUFFER:
+                self._add_flow(datapath, 10, match, actions, buffer_id)
+                return None
+            else:
+                self._add_flow(datapath, 10, match, actions)
 
         return actions
